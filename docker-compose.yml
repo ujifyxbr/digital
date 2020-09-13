@@ -1,0 +1,38 @@
+version: "3.3"
+
+services:
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    image: server
+    env_file:
+      - server/.env
+    container_name: server_compose
+    ports:
+      - 5000:5000
+    depends_on:
+      - db
+  
+  db:
+    image: postgres:latest
+    container_name: db_compose
+    ports:
+      - 5432:5432
+    restart: always
+    volumes:
+      - ./database_creation.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: always
+
+  admin:
+    build:
+      context: ./admin
+      dockerfile: Dockerfile 
+    env_file:
+      - admin/.env  
+    ports:
+      5050:5050
+    restart: always
+    depends_on:
+      - server
+      - db 
