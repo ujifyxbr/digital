@@ -17,7 +17,6 @@ RUN pip3 install imagecodecs requests
 RUN pip3 install cmake dlib
 
 RUN pip3 install facenet-pytorch
-RUN pip3 install git+http://github.com/ageitgey/face_recognition_models
 
 RUN pip3 install cython
 RUN pip3 install -U 'git+https://github.com/cocodataset/cocoapi.git#subdirectory=PythonAPI'
@@ -27,9 +26,8 @@ ENV FORCE_CUDA="1"
 ARG TORCH_CUDA_ARCH_LIST="Kepler;Kepler+Tesla;Maxwell;Maxwell+Tegra;Pascal;Volta;Turing"
 ENV TORCH_CUDA_ARCH_LIST="${TORCH_CUDA_ARCH_LIST}"
 
-RUN git clone https://github.com/facebookresearch/detectron2.git
-RUN pip3 install -e detectron2
-RUN pip3 install face_detection face_recognition
+RUN pip3 install 'git+https://github.com/facebookresearch/detectron2.git'
+RUN pip3 install face_recognition
 
 RUN pip3 install Flask flask flask-admin flask-login flask-security sqlalchemy email-validator psycopg2-binary python-dotenv
 

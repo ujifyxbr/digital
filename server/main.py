@@ -20,6 +20,7 @@ import config
 import models
 import db
 import enums
+import datetime as dt
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 mtcnn = MTCNN(keep_all=True, device=device)
@@ -78,7 +79,7 @@ def get_person_prediction(cv_img, known_students, known_encodings, bboxes, toler
 
 def process_frame(data):
     encoded_img = data['frame']
-    student_id =  db.db_session.query(models.Student.id).filter_by(email=data['email']).first()
+    student_id =  db.db_session.query(models.Student.id).filter_by(email=data['email']).scalar()
 
     img = decode_base64_to_img(encoded_img)
     cv_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -88,12 +89,14 @@ def process_frame(data):
     face_bboxes, _ = mtcnn.detect(processed_frame)
 
     filename = os.path.join(os.getcwd(), config.MONITORING_FOLDER, f'student_{student_id}_frame_{get_current_datetime()}')
+    filename = f'student_{student_id}_frame_{get_current_datetime()}'
     cv2.imwrite(filename, img)
 
     img_metadata = {}
     is_warning = False
-    alert_id = enums.AlertTypes.NO_WARNING
-
+    alert_id = enums.AlertTypes.NO_WARNING.value
+    alert_type = 'NO_WARNING'
+    
     face_bboxes_list = []
     if face_bboxes is not None:
         for b in face_bboxes:
@@ -104,26 +107,31 @@ def process_frame(data):
             else:
                 face_json['student'] = 'UNKNOWN_STUDENT'
                 is_warning = True
-                alert_id = enums.AlertTypes.UNKNOWN_STUDENT
+                alert_id = enums.AlertTypes.UNKNOWN_STUDENT.value
+                alert_type = 'UNKNOWN_STUDENT'
             face_bboxes_list.append(face_json)
         
         if len(face_bboxes) > 1:
             is_warning = True
-            alert_id = enums.AlertTypes.SEVERAL_PEOPLE
+            alert_id = enums.AlertTypes.SEVERAL_PEOPLE.value
+            alert_type = 'SEVERAL_PEOPLE'
     else:
         is_warning = True
-        alert_id = enums.AlertTypes.NO_PERSON
+        alert_id = enums.AlertTypes.NO_PERSON.value
+        alert_type = 'NO_PERSON'
 
     if len(phone_bboxes) > 0:
         is_warning = True
-        alert_id = enums.AlertTypes.PHONE
+        alert_id = enums.AlertTypes.PHONE.value
+        alert_type = 'PHONE'
 
     img_metadata['face_bboxes'] = face_bboxes_list
     img_metadata['phone_bboxes'] = phone_bboxes
     img_metadata['is_warning'] = is_warning
     img_metadata['alert_id'] = alert_id
 
-    event = models.Event(student_id=student_id, img_path=filename, img_metadata=img_metadata)
+    event = models.Event(student_id=student_id, img_path=filename, img_metadata=img_metadata, alert_id=alert_id, \
+        is_alert=is_warning, alert_type=alert_type, img=bytearray(encoded_img, 'utf-8'))
     db.db_session.add(event)
     db.db_session.commit()
 
@@ -132,24 +140,24 @@ def process_frame(data):
 def process_learn_images(data):
     global known_students, known_encodings, mtcnn
     student_id = db.db_session.query(models.Student.id).filter_by(email=data['email']).scalar()
-    if student_id is not None:
+    if student_id:
         for idx, encoded_image in enumerate(data['frames']):
-            img = main.decode_base64_to_img(encoded_image)
-            filename = f'student_{student_id}_frame_{idx}.jpg'
-            cv2.imwrite(os.path.join(os.getcwd(), config.LEARNING_FOLDER, filename), img)
-            known_students, known_encodings = learning(config.LEARNING_FOLDER, mtcnn)
-            return Response(response=None, status=200, headers={})
+            img = decode_base64_to_img(encoded_image)
+            filename = os.path.join(os.getcwd(), config.LEARNING_FOLDER, f'student_{student_id}_frame_{idx}.jpg') 
+            cv2.imwrite(filename=filename, img=img)
+            known_students, known_encodings = learning(mtcnn, config.LEARNING_FOLDER)
 
 def learning(model, folder=config.LEARNING_FOLDER):
     known_encodings = []
     known_students = []
     # filename example 'student_{student_id}_frame_{idx}.jpg'
-    for img_file in os.listdir(os.path.join(os.getcwd(), folder)):
+    folder_path = os.path.join(os.getcwd(), folder)
+    for img_file in os.listdir(folder_path):
         student_id = int(img_file.split('_')[1])
         student = db.db_session.query(models.Student).filter_by(id=student_id).first()
-        img = face_recognition.load_image_file(img_file)
+        img = face_recognition.load_image_file(os.path.join(folder_path, img_file))
         bboxes, _ = model.detect(img)
-        encodings = face_recognition.face_endocdings(img, bboxes)
+        encodings = face_recognition.face_encodings(img, bboxes)
         if len(encodings) == 1:
             known_students.append(student.first_name + '_' +  student.last_name)
             known_encodings.append(encodings[0])

@@ -8,6 +8,7 @@ from flask_admin import helpers as admin_helpers
 from flask import Flask, url_for, redirect
 
 from models import User, Role, Student, Event
+from flask_admin import BaseView
 from views import SecuredView, UserView, StudentView, EventView
 from extensions import db
 
@@ -27,11 +28,10 @@ admin = flask_admin.Admin(
     template_mode='bootstrap3',
 )
 
-admin.add_view(SecuredView(Role, db.session, menu_icon_type='fa', menu_icon_value='fa-server', name="Roles"))
-admin.add_view(UserView(User, db.session, menu_icon_type='fa', menu_icon_value='fa-users', name="Users"))
-#admin.add_view(SecuredView(Student, db.session, menu_icon_type='fa', menu_icon_value='fa-users', name="Student"))
-#admin.add_view(EventView(Event, db.session, menu_icon_type='fa', menu_icon_value='fa-users', name="Events"))
-#admin.add_view(CustomView(name="Custom view", endpoint='custom', menu_icon_type='fa', menu_icon_value='fa-connectdevelop',))
+#admin.add_view(SecuredView(Role, db.session, menu_icon_type='fa', menu_icon_value='fa-server', name="Roles"))
+#admin.add_view(UserView(User, db.session, menu_icon_type='fa', menu_icon_value='fa-users', name="Users"))
+admin.add_view(SecuredView(Student, db.session, menu_icon_type='fa', menu_icon_value='fa-users', name="Student"))
+admin.add_view(SecuredView(Event, db.session, menu_icon_type='fa', menu_icon_value='fa-users', name="Event"))
 
 @security.context_processor
 def security_context_processor():

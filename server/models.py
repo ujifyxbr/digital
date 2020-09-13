@@ -1,5 +1,5 @@
 from flask_security import UserMixin, RoleMixin
-from sqlalchemy import Table, Column, Integer, String, Boolean, DateTime, ForeignKey, Unicode, func
+from sqlalchemy import Table, Column, Integer, String, Boolean, DateTime, ForeignKey, Unicode, func, Binary
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import synonym, relationship, backref
 
@@ -28,7 +28,7 @@ class User(db.Base, UserMixin):
     active = Column(Boolean())
     confirmed_at = Column(DateTime())
     roles = relationship('Role', secondary=roles_users,
-                            backref=backref('users', lazy='dynamic'))
+                            backref=backref('user', lazy='dynamic'))
 
 class Student(db.Base):
     __tablename__ = 'student'
@@ -54,6 +54,8 @@ class Event(db.Base):
     img_metadata = Column(JSONB)
     alert_id = Column(Integer, ForeignKey('alert.id'))
     is_alert = Column(Boolean())
+    alert_type = Column(String())
+    img = Column(Binary())
 
     def __init__(self, **kwargs):
         super(Event, self).__init__(**kwargs)

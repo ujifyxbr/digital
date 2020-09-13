@@ -1,8 +1,8 @@
 
 from flask_admin.contrib import sqla
-from flask_admin import BaseView, expose
+from flask_admin import BaseView, expose, form
 from flask_security import current_user
-from flask import Flask, url_for, redirect, render_template, request, abort
+from flask import Flask, url_for, redirect, render_template, request, abort, Markup
 
 class SecuredView(sqla.ModelView):
 
@@ -16,9 +16,6 @@ class SecuredView(sqla.ModelView):
         return False
 
     def _handle_view(self, name, **kwargs):
-        """
-        Override builtin _handle_view in order to redirect users when a view is not accessible.
-        """
         if not self.is_accessible():
             if current_user.is_authenticated:
                 abort(403)
@@ -41,19 +38,18 @@ class UserView(SecuredView):
     column_details_exclude_list = column_exclude_list
     column_filters = column_editable_list
 
-
-class CustomView(BaseView):
-    @expose('/')
-    def index(self):
-        return self.render('admin/custom_index.html')
-
 class StudentView(SecuredView):
-    #can_edit = False
-    #can_create = False
-    column_list = ['email', 'active']
+    column_list = ['first_name', 'last_name', 'email', 'active']
 
 class EventView(SecuredView):
-    column_list = ['img_filename']
+
+    def _blob_formatter(view, context, model, name):
+        if model.img is not None:
+            return str(model.img[:10]) + '...'
+
+    column_formatters = {
+        'img': _blob_formatter
+    }
 
 
 

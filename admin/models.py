@@ -12,19 +12,21 @@ roles_users = db.Table(
 )
 
 class Role(db.Model, RoleMixin):
+    __tablename__ = 'role'
     id = db.Column(db.Integer(), primary_key=True)
     name = db.Column(db.String(80), unique=True)
     description = db.Column(db.String(255))
 
 
 class User(db.Model, UserMixin):
+    __tablename__ = 'user'
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(255), unique=True)
     password = db.Column(db.String(255))
     active = db.Column(db.Boolean())
     confirmed_at = db.Column(db.DateTime())
     roles = db.relationship('Role', secondary=roles_users,
-                            backref=db.backref('users', lazy='dynamic'))
+                            backref=db.backref('user', lazy='dynamic'))
 
 class Student(db.Model):
     __tablename__ = 'student'
@@ -44,13 +46,14 @@ class Event(db.Model):
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     student_id = db.Column(db.Integer, db.ForeignKey('student.id'))
-    exam_id = db.Column(db.Integer, db.ForeignKey('exam.id'))
     img_filename = synonym('img_path')
     img_path = db.Column(db.String(), unique=True)
     img_datetime = db.Column(db.DateTime(timezone=True), default=db.func.now())
     img_metadata = db.Column(JSONB)
     alert_id = db.Column(db.Integer, db.ForeignKey('alert.id'))
     is_alert = db.Column(db.Boolean())
+    alert_type = db.String(db.String()) # due to some problems with admin's preview
+    img = db.Column(db.Binary())
 
     def __init__(self, **kwargs):
         super(Event, self).__init__(**kwargs)
